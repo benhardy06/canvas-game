@@ -1,0 +1,9 @@
+body{
+/*    background-color: red;*/
+}
+
+#board{
+/*    background-color: #333333;*/
+    width:1000px;
+    height:500px
+}
