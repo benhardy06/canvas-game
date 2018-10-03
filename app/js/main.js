@@ -64,7 +64,7 @@ var canvas = document.getElementById("board");
 drawBoard(canvas);
 drawchar('hero',0,0)
 drawchar('villain',600,400)
-drawWalls()
+//drawWalls()
 function Character(type, posX, posY){
     this.type = type;
     this.posX = posX;
@@ -88,74 +88,145 @@ function virtualBoard(height, width, posGood, posBad){
 }
 bordCord = virtualBoard()
 
-walls=[{posX:95, posY:200}]
+//walls=[{posX:100, posY:200, where:'l'}, {posX:0, posY:200, where:'r'}]
 
+
+function wallFoundation(posX, posY, position){
+    this.posX =posX;
+    this.posY =posY;
+    this.position =position;  
+}
+
+
+wallFoundation.prototype.buildWall = function(){
+    var vertical = (this.position == 'l'|| this.position == 'r') ? true : false;
+    if(vertical){
+        this.wallSupport = (this.position == 'l') ? 'r' : 'l';
+        this.supportX = (this.wallSupport=='l')? this.posX + 100 : this.posX - 100;
+        return [{posX:this.posX, posY:this.posY, where:this.position}, {posX:this.supportX, posY:this.posY, where:this.wallSupport}]
+    }else{
+        this.wallSupport = (this.position == 'u') ? 'd' : 'u';
+        this.supportY = (this.wallSupport=='u')? this.posY + 100 : this.posY - 100;
+        return [{posX:this.posX, posY:this.posY, where:this.position}, {posX:this.posX, posY:this.supportY, where:this.wallSupport}]
+    }
+    
+}
+wallFoundation.prototype.paintWall = function(){
+    var vertical = (this.position == 'l'|| this.position =='r') ? true : false;
+    var canvas = document.getElementById("board");
+    var ctx = board.getContext("2d");
+    var w = 10;
+    var h = 100;
+    var x = this.posX;
+    var y = this.posY;
+    if(vertical){
+        x = (this.position == 'l'||this.position == 'r')? this.posX-5 : this.posX;
+        
+        
+    }else{
+        y = (this.position == 'u'||this.position =='d')? this.posY-5 : this.posY;
+        w=100; h=10
+    }
+    ctx.beginPath()
+    ctx.rect(x, y, w, h)
+    ctx.fillStyle = "brown";
+    ctx.fill();
+}
+
+
+
+var walls=[]
+var wall1 = new wallFoundation(100,200,'l')
+var wall2 = new wallFoundation(100,300,'u')
+wall1.buildWall().map(wall=> walls.push(wall))
+wall1.paintWall()
+wall2.buildWall().map(wall=> walls.push(wall))
+wall2.paintWall()
 char= new Character('hero', 0, 0)
 charBad = new Character('villain',600,400)
+
+function checkWall(char, potentialMove){
+    let wall = walls.filter(cor=> JSON.stringify({posX:cor.posX, posY:cor.posY}) == JSON.stringify({posX:char.posX, posY:char.posY}))
+    if(wall.length>0){
+        if(wall.some(w=> w.where==potentialMove.movement)){
+            return false
+        }else{
+            return true
+        }
+    }else{
+        return true
+    }
+    
+}
+
 
 
 document.addEventListener("keydown", function(event) {
     
     let potentialMove = characterMove(event.which, char)
     let validPos = bordCord.some(cor=> JSON.stringify(cor) == JSON.stringify({posX:potentialMove.posX, posY:potentialMove.posY}))
-    console.log(JSON.stringify({posX:potentialMove.posX-5, posY:potentialMove.posY}))
-    let noWall = walls.some(cor=> JSON.stringify(cor) != JSON.stringify({posX:potentialMove.posX-5, posY:potentialMove.posY}))
+    let noWall = checkWall(char, potentialMove)
     
-    console.log(validPos)
+    let villPotenialMove = villainMove(potentialMove.posX,potentialMove.posY,charBad.posX,charBad.posY,false)
+    let noVillainWall = checkWall(charBad, villPotenialMove)
+    console.log(villPotenialMove)
     if(validPos && noWall){
         char = characterMove(event.which, char)
-        charBad = villainMove(char.posX,char.posY,charBad.posX,charBad.posY)
-        
+        if(noVillainWall){
+            charBad = villainMove(char.posX,char.posY,charBad.posX,charBad.posY)
+        }
         drawBoard(canvas);
         drawchar(char.type,char.posX,char.posY)
         drawchar(charBad.type,charBad.posX,charBad.posY)
-        drawWalls()
-       
-        
-    }else{
-    
+        wall1.paintWall()
+        wall2.paintWall()   
     }
-    
-    
-    
 })
 
 
 function characterMove(key, char){
     posX = char.posX
     posY = char.posY
-    
+    var mov='';
     if(key==39){
-        posX=posX+100
+        posX=posX+100;
+         mov='r';
     }else if(key==37){
         posX=posX-100
+         mov='l';
     }else if(key==38){
          posY=posY-100;
+        mov='u'
     }else if(key==40){
         posY=posY+100;
+        mov='d'
     }
     
-    return {type: char.type, posX:posX, posY:posY}
+    return {type: char.type, posX:posX, posY:posY, movement:mov}
 }
 
-function villainMove(hx,hy,vx,vy){
+function villainMove(hx,hy,vx,vy, wall){
     let xdiff = Math.abs(hx-vx);
     let ydiff = Math.abs(hy-vy);
-    console.log(xdiff,ydiff)
-    if(xdiff > ydiff){
-        if(vx>hx){
-            vx=vx-100 
+    var mov = ''
+    if(!wall){
+        if(xdiff > ydiff){
+            if(vx>hx){
+                vx=vx-100 
+                 mov='l';
+            }else{
+                vx=vx+100 
+                 mov='r';
+            }
         }else{
-            vx=vx+100 
+            if(vy>hy){
+                vy=vy-100;
+                mov='u';
+            }else{
+                vy=vy+100
+                mov='d';
+            }  
         }
-        console.log(vx)
-    }else{
-        if(vy>hy){
-            vy=vy-100
-        }else{
-            vy=vy+100
-        }  
     }
-    
-    return {type:'villain', posX:parseInt(vx), posY:parseInt(vy)}  
+    return {type:'villain', posX:parseInt(vx), posY:parseInt(vy), movement:mov}   
 }
