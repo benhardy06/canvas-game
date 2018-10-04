@@ -148,8 +148,12 @@ charBad = new Character('villain',600,400)
 function checkWall(char, potentialMove){
     let wall = walls.filter(cor=> JSON.stringify({posX:cor.posX, posY:cor.posY}) == JSON.stringify({posX:char.posX, posY:char.posY}))
     if(wall.length>0){
-        if(wall.some(w=> w.where==potentialMove.movement)){
-            return false
+        if(wall.some(w=> w.where==potentialMove.movement) && char.type=='hero'){
+            return false;
+        }else if(char.type=='villain'){
+            console.log('walls')
+            if(wall.length==0) wall=[{}]
+            return wall
         }else{
             return true
         }
@@ -167,14 +171,14 @@ document.addEventListener("keydown", function(event) {
     let validPos = bordCord.some(cor=> JSON.stringify(cor) == JSON.stringify({posX:potentialMove.posX, posY:potentialMove.posY}))
     let noWall = checkWall(char, potentialMove)
     
-    let villPotenialMove = villainMove(potentialMove.posX,potentialMove.posY,charBad.posX,charBad.posY,false)
-    let noVillainWall = checkWall(charBad, villPotenialMove)
-    console.log(villPotenialMove)
+    let villPotenialMove = villainMove(potentialMove.posX,potentialMove.posY,charBad.posX,charBad.posY,[{}])
+    let villainWall = checkWall(charBad, villPotenialMove);
+    console.log(villainWall)
+    
     if(validPos && noWall){
         char = characterMove(event.which, char)
-        if(noVillainWall){
-            charBad = villainMove(char.posX,char.posY,charBad.posX,charBad.posY)
-        }
+        charBad = villainMove(char.posX,char.posY,charBad.posX,charBad.posY,villainWall)
+        
         drawBoard(canvas);
         drawchar(char.type,char.posX,char.posY)
         drawchar(charBad.type,charBad.posX,charBad.posY)
@@ -205,28 +209,53 @@ function characterMove(key, char){
     return {type: char.type, posX:posX, posY:posY, movement:mov}
 }
 
-function villainMove(hx,hy,vx,vy, wall){
+//function villainMove(hx,hy,vx,vy, noWall){
+//    let xdiff = Math.abs(hx-vx);
+//    let ydiff = Math.abs(hy-vy);
+//    var mov = ''
+//        if(xdiff > ydiff){
+//            if(vx>hx){
+//                vx=vx-100 
+//                 mov='l';
+//            }else{
+//                vx=vx+100 
+//                 mov='r';
+//            }
+//        }else{
+//            if(vy>hy){
+//                vy=vy-100;
+//                mov='u';
+//            }else{
+//                vy=vy+100
+//                mov='d';
+//            }  
+//        }
+//    return {type:'villain', posX:parseInt(vx), posY:parseInt(vy), movement:mov}   
+//}
+
+function villainMove(hx,hy,vx,vy, walls){
+    console.log(walls)
     let xdiff = Math.abs(hx-vx);
     let ydiff = Math.abs(hy-vy);
-    var mov = ''
-    if(!wall){
-        if(xdiff > ydiff){
-            if(vx>hx){
-                vx=vx-100 
-                 mov='l';
-            }else{
-                vx=vx+100 
-                 mov='r';
-            }
-        }else{
-            if(vy>hy){
-                vy=vy-100;
-                mov='u';
-            }else{
-                vy=vy+100
-                mov='d';
-            }  
+    let yaxis = (xdiff < ydiff) ? true :false
+    var mov = '';
+        if(vx>hx && !yaxis && walls.some(w=>w.position != 'l')){
+            vx=vx-100 
+             mov='l';
+        }else if(vx<hx && !yaxis && walls.some(w=>w.position != 'r')){
+            vx=vx+100 
+             mov='r';
+        }else if(vy>hy && yaxis && walls.some(w=>w.position != 'u')){
+            vy=vy-100;
+            mov='u';
+        }else if(vy<hy && yaxis && walls.some(w=>w.position != 'd')){
+            vy=vy+100
+            mov='d';
         }
-    }
-    return {type:'villain', posX:parseInt(vx), posY:parseInt(vy), movement:mov}   
+    return {type:'villain', posX:vx, posY:vy, movement:mov}   
 }
+
+
+
+
+
