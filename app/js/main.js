@@ -167,25 +167,30 @@ function checkWall(char, potentialMove){
 
 
 document.addEventListener("keydown", function(event) {
-    let potentialMove = characterMove(event.which, char)
+    let coords = movement(event.which, char, charBad)
+    char = coords.char;
+    charBad = coords.charBad;
+    drawBoard(canvas);
+    drawchar(char.type,char.posX,char.posY)
+    drawchar(charBad.type,charBad.posX,charBad.posY)
+    wall1.paintWall()
+    wall2.paintWall()  
+})
+
+
+function movement(key, char, charBad){
+   let potentialMove = characterMove(key, char)
     let validPos = bordCord.some(cor=> JSON.stringify(cor) == JSON.stringify({posX:potentialMove.posX, posY:potentialMove.posY}))
     let noWall = checkWall(char, potentialMove)
-    
-    
-    
     if(validPos && noWall){
-        char = characterMove(event.which, char)
+        char = characterMove(key, char)
         let villPotenialMove = villainMove(potentialMove.posX,potentialMove.posY,charBad.posX,charBad.posY,[{}],false,false)
         let villainWall = checkWall(charBad, villPotenialMove);
         charBad = villainMove(char.posX,char.posY,charBad.posX,charBad.posY,villainWall,false,false)
-        drawBoard(canvas);
-        drawchar(char.type,char.posX,char.posY)
-        drawchar(charBad.type,charBad.posX,charBad.posY)
-        wall1.paintWall()
-        wall2.paintWall()   
-    }
-})
-
+        
+    } 
+    return{char:char, charBad:charBad}
+}
 
 function characterMove(key, char){
     posX = char.posX
@@ -260,49 +265,41 @@ function villainYMove(hx,hy,vx,vy, walls, altRoute){
     }
 }
 
-var mapBad = new Character('villain',600,400)
-var mapGood = new Character('hero',0,0)
+
 //level generation
+
+var mapHero = new Character('hero',0,0)
+var mapVillain = new Character('villain',600,400)
 function levelGenertaion(){
     var trapped = {posX:100, posY:200};
-    var keys=[37,38,39,40];
-    
-    var diffs = []
-    var diff=false
-    keys.map((key, index)=>{ 
-        let difference = movement(key, trapped, false)
-        let holder = false
-        if(difference < holder || !holder || holder=="invalid"){ holder=difference; diff = index;}  })
-    
-        var path = []
-        path.push(movement(keys[diff], trapped, true))
-        console.log(path)
+    var keys=[37,39,38,40];
+    var bestMove = false;
+    var moves =[];
+    var bestMoveIndex = false
+    keys.map((key, index)=>{
+       
+       let coords = movement(key,mapHero,mapVillain)
+       moves.push(coords)
+       let distance = (Math.pow((coords.charBad.posX-trapped.posX),2)) + (Math.pow((coords.charBad.posY-trapped.posY),2))
+       distance = Math.sqrt(distance)
+       if(!bestMove || (distance < bestMove)){
+          bestMove = distance; 
+           bestMoveIndex = index
+       }
+        
+       
+        
+    })
+    mapHero=moves[bestMoveIndex].char
+    mapVillain=moves[bestMoveIndex].charBad
+    console.log(mapHero)
+//        console.log(path)
         
 }
 
-function movement(key, trapped, track){
-    let potentialMove = characterMove(key, mapGood)
-    let validPos = bordCord.some(cor=> JSON.stringify(cor) == JSON.stringify({posX:potentialMove.posX, posY:potentialMove.posY}))
-    let noWall = checkWall(mapGood, potentialMove)
-    if(validPos && noWall){
-        if(track){
-            mapGood = characterMove(key, mapGood)
-        }
-        let villPotenialMove = villainMove(potentialMove.posX,potentialMove.posY,mapBad.posX,mapBad.posY,[{}],false,false)
-        let villainWall = checkWall(mapBad, villPotenialMove);
-        if(track){
-            mapBad = villainMove(mapGood.posX,mapGood.posY,mapBad.posX,mapBad.posY,villainWall,false,false)
-        }
-        let premapBad = villainMove(mapGood.posX,mapGood.posY,mapBad.posX,mapBad.posY,villainWall,false,false)
-        let xdiff = Math.abs(trapped.posX-premapBad.posX);
-        let ydiff = Math.abs(trapped.posY-premapBad.posY); 
-        let fullDiff = xdiff+ydiff
-        return fullDiff
-    }
-    return'invalid'
-}
+
 var car=0
-while(car<4){
+while(car<16){
    levelGenertaion() 
    car++
 }
