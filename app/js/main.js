@@ -368,7 +368,6 @@ foundations=[];
             found.map(b=>walls.push(b))
     })
      console.log(walls)
-     console.log(walls)
 //    var wall1 = new wallFoundation(100,200,'l')
 //    var wall2 = new wallFoundation(100,300,'u')
 //    wall1.buildWall().map(wall=> walls.push(wall))
