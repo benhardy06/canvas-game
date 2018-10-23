@@ -51,6 +51,8 @@ function drawchar(char, posX, posY, row, col){
     ctx.rect(posX, posY, w, h)
     if(char== 'hero'){
         ctx.fillStyle = "red";
+    }else if(char== 'trapped') {
+        ctx.fillStyle = "yellow";
     }else{
         ctx.fillStyle = "green";
     }
@@ -60,10 +62,10 @@ function drawchar(char, posX, posY, row, col){
 
 
 
-var canvas = document.getElementById("board");
-drawBoard(canvas);
-drawchar('hero',0,0)
-drawchar('villain',600,400)
+//var canvas = document.getElementById("board");
+//drawBoard(canvas);
+//drawchar('hero',0,0)
+//drawchar('villain',600,400)
 //drawWalls()
 function Character(type, posX, posY){
     this.type = type;
@@ -133,17 +135,16 @@ wallFoundation.prototype.paintWall = function(){
     ctx.fill();
 }
 
-
-
+var foundations=[]
 var walls=[]
-var wall1 = new wallFoundation(100,200,'l')
-var wall2 = new wallFoundation(100,300,'u')
-wall1.buildWall().map(wall=> walls.push(wall))
-wall1.paintWall()
-wall2.buildWall().map(wall=> walls.push(wall))
-wall2.paintWall()
-char= new Character('hero', 0, 0)
-charBad = new Character('villain',600,400)
+
+//var wall1 = new wallFoundation(100,200,'l')
+//var wall2 = new wallFoundation(100,300,'u')
+//wall1.buildWall().map(wall=> walls.push(wall))
+//wall1.paintWall()
+//wall2.buildWall().map(wall=> walls.push(wall))
+//wall2.paintWall()
+
 
 function checkWall(char, potentialMove){
     let wall = walls.filter(cor=> JSON.stringify({posX:cor.posX, posY:cor.posY}) == JSON.stringify({posX:char.posX, posY:char.posY}))
@@ -167,18 +168,19 @@ function checkWall(char, potentialMove){
 
 
 document.addEventListener("keydown", function(event) {
-    let coords = movement(event.which, char, charBad)
+    let coords = movement(event.which, char, charBad, solution)
     char = coords.char;
     charBad = coords.charBad;
+    solution = coords.trapped
     drawBoard(canvas);
     drawchar(char.type,char.posX,char.posY)
     drawchar(charBad.type,charBad.posX,charBad.posY)
-    wall1.paintWall()
-    wall2.paintWall()  
+    drawchar(solution.type, solution.posX,solution.posY)
+    foundations.map(built=>built.paintWall())  
 })
 
 
-function movement(key, char, charBad){
+function movement(key, char, charBad,trapped){
    let potentialMove = characterMove(key, char)
     let validPos = bordCord.some(cor=> JSON.stringify(cor) == JSON.stringify({posX:potentialMove.posX, posY:potentialMove.posY}))
     let noWall = checkWall(char, potentialMove)
@@ -189,7 +191,7 @@ function movement(key, char, charBad){
         charBad = villainMove(char.posX,char.posY,charBad.posX,charBad.posY,villainWall,false,false)
         
     } 
-    return{char:char, charBad:charBad}
+    return{char:char, charBad:charBad, trapped:trapped}
 }
 
 function characterMove(key, char){
@@ -268,38 +270,107 @@ function villainYMove(hx,hy,vx,vy, walls, altRoute){
 
 //level generation
 
-var mapHero = new Character('hero',0,0)
-var mapVillain = new Character('villain',600,400)
-function levelGenertaion(){
-    var trapped = {posX:100, posY:200};
+
+function levelGenertaion(mapHero, mapVillain, trapped, difficulty){
+    var car=0
+    var correctPath=[]
+    var statringValue=[JSON.stringify(mapHero), JSON.stringify(mapVillain)];
+    while(car<8){
     var keys=[37,39,38,40];
     var bestMove = false;
     var moves =[];
-    var bestMoveIndex = false
+    var bestMoveIndex = 0;
+    
     keys.map((key, index)=>{
-       
-       let coords = movement(key,mapHero,mapVillain)
+       let coords = movement(key,mapHero,mapVillain, trapped)
        moves.push(coords)
        let distance = (Math.pow((coords.charBad.posX-trapped.posX),2)) + (Math.pow((coords.charBad.posY-trapped.posY),2))
        distance = Math.sqrt(distance)
        if(!bestMove || (distance < bestMove)){
-          bestMove = distance; 
-           bestMoveIndex = index
+          bestMove = distance;
+           if((moves[index].char.posX != moves[index].charBad.posX) && (moves[index].char.posY != moves[index].charBad.posY)){
+               bestMoveIndex = index
+           }
+           
        }
         
-       
-        
+            
     })
     mapHero=moves[bestMoveIndex].char
     mapVillain=moves[bestMoveIndex].charBad
+    correctPath.push(mapHero,mapVillain)
     console.log(mapHero)
-//        console.log(path)
+    if((trapped.posX == mapVillain.posX) && (trapped.posY == mapVillain.posY) && car == 7){
+        canvas = document.getElementById("board");
+        char= JSON.parse(statringValue[0])
+        charBad = JSON.parse(statringValue[1])
+        solution = trapped
+        drawBoard(canvas);
+        drawchar(char.type, char.posX,char.posY)
+        drawchar(charBad.type, charBad.posX,charBad.posY)
+        drawchar(trapped.type, trapped.posX,trapped.posY)
+        return correctPath
+    }
+        
+    car++
+    }
         
 }
 
 
+function randomPieces(){
+    var pieces = [];
+    var board = bordCord.slice()
+    while(pieces.length < 3){
+        let addPiece = board[Math.floor(Math.random()*board.length)];
+        pieces.push(addPiece);
+        board  = board.filter(coord=> JSON.stringify(coord) != JSON.stringify(addPiece))
+    }
+    var mapHero = new Character('hero',pieces[0].posX,pieces[0].posY)
+    var mapVillain = new Character('villain',pieces[1].posX,pieces[1].posY)
+    
+    var trapped = new Character('trapped',pieces[2].posX,pieces[2].posY)
+    
+    
+    
+      return levelGenertaion(mapHero,mapVillain,trapped)
+       
+}
+
+
 var car=0
-while(car<16){
-   levelGenertaion() 
+while(car<1000){
+    console.log('loop')
+   var path = randomPieces()
+   if(typeof path != "undefined") car=1000; console.log(path)
    car++
+}
+randomWalls()
+
+
+function randomWalls(correctPath){
+var board = bordCord.slice();
+var potentialPositions=['u','l']
+foundations=[];
+    var car=0
+    while(car<15){
+        var wall = board[Math.floor(Math.random()*board.length)];
+            wall.where = potentialPositions[Math.floor(Math.random()*potentialPositions.length)];
+            foundations.push(new wallFoundation(wall.posX,wall.posY,wall.where));
+        car++
+    }
+
+   
+    walls=[]
+    foundations.map(w=> {
+        var found = w.buildWall()
+        console.log(found)
+            found.map(b=>walls.push(b))
+    })
+     console.log(walls)
+     console.log(walls)
+//    var wall1 = new wallFoundation(100,200,'l')
+//    var wall2 = new wallFoundation(100,300,'u')
+//    wall1.buildWall().map(wall=> walls.push(wall))
+    foundations.map(built=>built.paintWall())
 }
